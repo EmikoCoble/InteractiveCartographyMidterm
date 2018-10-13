@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Midterm Northeastern Illinois University By: Emiko Coble 10/12/2018</title>
+
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.3.4/dist/leaflet.css"
+        integrity="sha512-puBpdR0798OZvTTbP4A8Ix/l+A4dHDD0DGqYW6RQ+9jxkRFclaxxQb/SJAWZfWAkuyeQUytO7+7N4QKrDh+drA=="
+        crossorigin=""/>
+
+        <script src="https://unpkg.com/leaflet@1.3.4/dist/leaflet.js"
+        integrity="sha512-nMMmRyTVoLYqjP9hrbed9S+FzjZHW5gY1TWCHA5ckwXZBadntCNs8kEqAWdrb9O7rxbCaA4lKTIWjDXZxflOcA=="
+        crossorigin=""></script>
+
+        <script type="text/javascript" src="data.js"></script>
+
+        <script type="text/javascript" src="data1.js"></script>
+
+        <link rel="icon" href="age.png" >
+
+    <style type="text/css">
+        html, body { margin: 0; padding: 0; height: 100%; }
+        #map { min-height: 100%; }
+
+      /* Optional: adjust the values below to change the appearance of the legend */
+      .legend {
+      padding: 6px 8px;
+      line-height: 18px;
+      background: rgba(255,255,255,0.9);
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+      border-radius: 5px;
+      }
+
+      /* Optional: adjust the values below to change the appearance of the legend color boxes */
+      .legend i {
+      width: 18px;
+      height: 18px;
+      float: left;
+      margin-right: 8px;
+      opacity: 0.7;
+      }
+
+    </style>
+
+    </head>
+
+    <body>
+
+        <div id="map"></div>
+
+        <script type="text/javascript">
+
+          var map = L.map('map', {
+              center: [37,-96], // coordinates lat and long
+              zoom: 2
+          });
+
+         var dark = L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}', {
+           attribution: 'Map data © OpenStreetMap contributors, CC-BY-SA, Imagery © Mapbox',
+           maxZoom: 11,
+           minZoom: 5,
+           id: 'mapbox.dark',
+           accessToken:'pk.eyJ1IjoiZS1jb2JsZSIsImEiOiJjamxmcnViY3EwenU3M3dveWljN3B5bnM4In0.aImb9yimk0Qc-0OTeqlzKg'
+         }).addTo(map);
+
+         function getColor(value) {
+           return value > 33     ? '#253494':
+                  value > 23     ? '#2c7fb8':
+                  value > 17     ? '#41b6c4':
+                  value > 13     ? '#a1dab4':
+                                    '#ffffcc';
+          }
+
+          function style(features){
+            return {
+            fillColor: getColor(features.properties.per_aging),   // pop_den is the field name for the population density data
+            weight: 2,
+            opacity: 1,
+            color: 'gray',
+            fillOpacity: 0.9
+            };
+          }
+
+
+         var states = L.geoJson(data, {style:style}).addTo(map);
+
+
+          function highlightFeature(e) {
+              // Get access to the feature that was hovered through e.target
+              var feature = e.target;
+
+              // Set a thick grey border on the feature as mouseover effect
+              // Adjust the values below to change the highlighting styles of features on mouseover
+              // Check out https://leafletjs.com/reference-1.3.4.html#path for more options for changing style
+              feature.setStyle({
+                  weight: 5,
+                  color: '#666',
+                  fillOpacity: 0.7
+              });
+
+              // Bring the highlighted feature to front so that the border doesn’t clash with nearby states
+              // But not for IE, Opera or Edge, since they have problems doing bringToFront on mouseover
+              if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+                  feature.bringToFront();
+              }
+          }
+
+
+
+          var geojson; // define a variable to make the geojson layer accessible for the funtion to use
+
+          function resetHighlight(e) {
+              geojson.resetStyle(e.target);
+          }
+
+
+          function onEachFeature(feature, layer) {
+              layer.on({
+                  mouseover: highlightFeature, // Do what defined by the highlightFeature function on mouseover
+                  mouseout: resetHighlight,    // Do what defined by the resetHighlight function on mouseout
+              });
+          }
+
+
+          geojson = L.geoJson(data, {
+              style:style,
+              onEachFeature: onEachFeature
+          }).bindTooltip(function (layer){
+              return layer.feature.properties.NAME10
+                     + '<p style="color:black">' + layer.feature.properties.per_aging.toString() + ' Percentage/Population </p>';
+          }).addTo(map);
+
+
+
+
+
+
+         var legend = L.control({position: 'bottomright'}); // Try the other three corners if you like.
+
+                      legend.onAdd = function (map) {
+
+                          var div = L.DomUtil.create('div', 'legend'),
+                              grades = [0, 15, 17, 23, 33]; // The break values to define the intervals of population, note we begin from 0 here
+
+                          div.innerHTML = '<b>Population Density Age 65 and over<br>Percentage of Total Population<br></b>'; // The legend title, in this case it's Population Density 2011
+
+                          // Loop through our the classes and generate a label with a colored square for each interval.
+                          // If you are creating a similar choropleth map, you do not need to change lines below.
+                          for (var i = 0; i < grades.length; i++) {
+                              div.innerHTML +=
+                              '<i style="background:' + getColor(grades[i] + 1) + '"></i>' +
+                              grades[i] + (grades[i + 1] ? '&ndash;' + grades[i + 1] + '<br>' : '+');
+                          }
+
+                          return div;
+                      };
+
+                    legend.addTo(map);
+
+
+
+          var counties = L.geoJson(data1, {style:style}).addTo(map);
+
+
+          function highlightFeature(e) {
+              // Get access to the feature that was hovered through e.target
+              var feature = e.target;
+
+              // Set a thick grey border on the feature as mouseover effect
+              // Adjust the values below to change the highlighting styles of features on mouseover
+              // Check out https://leafletjs.com/reference-1.3.4.html#path for more options for changing style
+              feature.setStyle({
+                  weight: 5,
+                  color: '#666',
+                  fillOpacity: 0.7
+              });
+
+              // Bring the highlighted feature to front so that the border doesn’t clash with nearby states
+              // But not for IE, Opera or Edge, since they have problems doing bringToFront on mouseover
+              if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+                  feature.bringToFront();
+              }
+          }
+
+
+
+          var geojson1; // define a variable to make the geojson layer accessible for the funtion to use
+
+          function resetHighlight(e) {
+              geojson.resetStyle(e.target);
+          }
+
+
+          function onEachFeature(feature, layer) {
+              layer.on({
+                  mouseover: highlightFeature, // Do what defined by the highlightFeature function on mouseover
+                  mouseout: resetHighlight,    // Do what defined by the resetHighlight function on mouseout
+              });
+          }
+
+
+          geojson1 = L.geoJson(data1, {
+              style:style,
+              onEachFeature: onEachFeature
+          }).bindTooltip(function (layer){
+              return layer.feature.properties.NAMELSAD10
+                     + '<p style="color:black">' + layer.feature.properties.per_aging.toString() + ' Percentage/Population </p>';
+          }).addTo(map);
+
+
+          var basemaps = {
+              "Dark": dark
+
+          };
+
+          var overlaymaps = {
+            "State Level": states,
+            "Counties Level": counties
+
+          };
+
+          L.control.layers(basemaps, overlaymaps).addTo(map);
+
+
+          // Removing the legend when the layer is removed
+          map.on('overlayremove', function(eventLayer){
+          if (eventLayer.name == 'By Counties'){ // We use the key/display name to refer to the layer
+          map.removeControl(legend); // legend is the variable name of the layer legend
+          }
+          });
+
+          // Adding the legend when the layer is added
+          map.on('overlayadd', function(eventLayer){
+          if (eventLayer.name == 'By Counties'){
+          legend.addTo(map);
+          }
+          });
+
+
+        </script>
+   </body>
+</html>
